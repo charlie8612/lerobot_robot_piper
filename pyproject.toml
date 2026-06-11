@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lerobot_robot_piper"
+version = "0.1.0"
+description = "LeRobot plugin for the AgileX Piper robot arm — safe startup, smooth home/rest, deg/rad units, MIT impedance mode"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "charlie8612" }]
+keywords = ["lerobot", "robotics", "piper", "agilex", "imitation-learning", "teleoperation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "lerobot",
+    "piper-sdk",
+    "numpy",
+]
+
+[project.urls]
+Homepage = "https://github.com/charlie8612/lerobot_robot_piper"
+Repository = "https://github.com/charlie8612/lerobot_robot_piper"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
