@@ -4,6 +4,9 @@ from .config_bi_piper_follower import BiPiperFollowerConfig
 from .bi_piper_follower import BiPiperFollower
 
 __all__ = [
-    "PiperFollowerBaseConfig", "PiperFollowerConfig", "PiperFollower",
-    "BiPiperFollowerConfig", "BiPiperFollower",
+    "PiperFollowerBaseConfig",
+    "PiperFollowerConfig",
+    "PiperFollower",
+    "BiPiperFollowerConfig",
+    "BiPiperFollower",
 ]

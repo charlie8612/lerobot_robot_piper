@@ -19,9 +19,17 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "lerobot",
-    "piper-sdk",
-    "numpy",
+    "lerobot>=0.4.0",
+    "piper-sdk>=0.6.0",
+    "numpy>=1.21",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "mypy>=1.0",
+    "ruff>=0.1",
+    "bandit>=1.7",
 ]
 
 [project.urls]
@@ -33,3 +41,10 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]

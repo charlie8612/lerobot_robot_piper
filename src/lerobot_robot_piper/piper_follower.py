@@ -2,6 +2,7 @@ import logging
 import math
 import time
 from functools import cached_property
+from typing import Any
 
 import numpy as np
 
@@ -28,6 +29,36 @@ GRIPPER_RANGE_MM = (0.0, 70.0)
 JOINT_NAMES = ["joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"]
 
 
+def clamp_to_limits(goal_deg: dict[str, float]) -> dict[str, float]:
+    """Clamp joint positions (deg) and gripper (mm) to the Piper's safe ranges.
+
+    Keys are bare joint names (``joint_1`` .. ``joint_6``) and ``gripper``.
+    """
+    out = dict(goal_deg)
+    for name, (lo, hi) in JOINT_LIMITS_DEG.items():
+        if name in out:
+            out[name] = float(np.clip(out[name], lo, hi))
+    if "gripper" in out:
+        out["gripper"] = float(np.clip(out["gripper"], *GRIPPER_RANGE_MM))
+    return out
+
+
+def apply_slew_limit(
+    goal_deg: dict[str, float], current_deg: dict[str, float], max_delta: float
+) -> dict[str, float]:
+    """Limit each joint/gripper move to ``±max_delta`` per step, relative to ``current_deg``.
+
+    Only keys present in both ``goal_deg`` and ``current_deg`` are limited. This is the
+    per-step slew-rate guard against sudden large commands (sensor glitch, leader jump).
+    """
+    out = dict(goal_deg)
+    for name in out:
+        if name in current_deg:
+            diff = float(np.clip(out[name] - current_deg[name], -max_delta, max_delta))
+            out[name] = current_deg[name] + diff
+    return out
+
+
 class PiperFollower(Robot):
     """LeRobot-compatible driver for AgileX Piper robot arm.
 
@@ -44,7 +75,7 @@ class PiperFollower(Robot):
     def __init__(self, config: PiperFollowerConfig):
         super().__init__(config)
         self.config = config
-        self.piper = None
+        self.piper: Any = None  # piper_sdk C_PiperInterface_V2, set on connect()
         self._is_connected = False
         self.cameras = make_cameras_from_configs(config.cameras)
 
@@ -106,8 +137,9 @@ class PiperFollower(Robot):
         # Immediately overwrite stale target with current position (send multiple
         # times to ensure at least one is processed before the stale command)
         for _ in range(5):
-            self.piper.JointCtrl(js.joint_1, js.joint_2, js.joint_3,
-                                 js.joint_4, js.joint_5, js.joint_6)
+            self.piper.JointCtrl(
+                js.joint_1, js.joint_2, js.joint_3, js.joint_4, js.joint_5, js.joint_6
+            )
         time.sleep(0.1)
 
         # Now safe to switch to normal speed
@@ -197,7 +229,11 @@ class PiperFollower(Robot):
 
     @check_if_not_connected
     def send_action(self, action: RobotAction) -> RobotAction:
-        goal = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos")}
+        goal = {
+            key.removesuffix(".pos"): val
+            for key, val in action.items()
+            if key.endswith(".pos")
+        }
 
         # If unit is rad, convert to degrees for internal processing
         if self.config.unit == "rad":
@@ -208,11 +244,7 @@ class PiperFollower(Robot):
                 goal["gripper"] = goal["gripper"] * 1000.0  # meters → mm
 
         # Clamp to joint limits (always in degrees)
-        for name, (lo, hi) in JOINT_LIMITS_DEG.items():
-            if name in goal:
-                goal[name] = float(np.clip(goal[name], lo, hi))
-        if "gripper" in goal:
-            goal["gripper"] = float(np.clip(goal["gripper"], *GRIPPER_RANGE_MM))
+        goal = clamp_to_limits(goal)
 
         # Safety: limit relative movement per step (in degrees)
         if self.config.max_relative_target is not None:
@@ -221,22 +253,20 @@ class PiperFollower(Robot):
             max_delta = self.config.max_relative_target
             if self.config.unit == "rad":
                 max_delta = math.degrees(max_delta)
+            current_deg: dict[str, float] = {}
             for name in JOINT_NAMES:
                 key = f"{name}.pos"
-                if name in goal and key in current_obs:
+                if key in current_obs:
                     current = current_obs[key]
-                    if self.config.unit == "rad":
-                        current = math.degrees(current)
-                    diff = goal[name] - current
-                    clamped_diff = float(np.clip(diff, -max_delta, max_delta))
-                    goal[name] = current + clamped_diff
-            if "gripper" in goal and "gripper.pos" in current_obs:
-                current_grip = current_obs["gripper.pos"]
-                if self.config.unit == "rad":
-                    current_grip = current_grip * 1000.0
-                g_diff = goal["gripper"] - current_grip
-                g_diff = float(np.clip(g_diff, -max_delta, max_delta))
-                goal["gripper"] = current_grip + g_diff
+                    current_deg[name] = (
+                        math.degrees(current) if self.config.unit == "rad" else current
+                    )
+            if "gripper.pos" in current_obs:
+                grip = current_obs["gripper.pos"]
+                current_deg["gripper"] = (
+                    grip * 1000.0 if self.config.unit == "rad" else grip
+                )
+            goal = apply_slew_limit(goal, current_deg, max_delta)
 
         if self.config.use_mit_mode:
             # MIT mode: send per-joint (pos, vel, kp, kd, t_ref). pos_ref in radians.
@@ -262,7 +292,9 @@ class PiperFollower(Robot):
         gripper_val = int(round(goal.get("gripper", 0.0) * 1000))
         self.piper.GripperCtrl(abs(gripper_val), self.config.gripper_effort, 0x01, 0)
 
-        return {f"{name}.pos": goal.get(name, 0.0) for name in JOINT_NAMES + ["gripper"]}
+        return {
+            f"{name}.pos": goal.get(name, 0.0) for name in JOINT_NAMES + ["gripper"]
+        }
 
     @check_if_not_connected
     def disconnect(self) -> None:
@@ -287,9 +319,9 @@ class PiperFollower(Robot):
         "joint_6.pos": 0.00,
         "gripper.pos": 0.60,
     }
-    _SAFE_SPEED = 30.0      # deg/s
-    _CONTROL_RATE = 100.0   # Hz
-    _MIN_DURATION = 0.3     # seconds
+    _SAFE_SPEED = 30.0  # deg/s
+    _CONTROL_RATE = 100.0  # Hz
+    _MIN_DURATION = 0.3  # seconds
 
     def _get_current_deg(self) -> dict[str, float]:
         """Get current joint positions in degrees, regardless of unit config."""

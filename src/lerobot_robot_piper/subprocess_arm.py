@@ -5,6 +5,7 @@ When two instances exist in the same process, their background threads compete
 for the Python GIL, causing ~10x slowdown on all operations. Running the second
 arm in a subprocess gives it its own GIL, matching single-arm performance.
 """
+
 import multiprocessing as mp
 import logging
 
@@ -44,10 +45,13 @@ def _follower_worker(config_dict, pipe):
             elif cmd == "is_connected":
                 pipe.send(("ok", follower.is_connected))
     except (EOFError, BrokenPipeError):
+        # Parent pipe closed — best-effort cleanup, log rather than swallow silently.
         try:
             follower.disconnect()
         except Exception:
-            pass
+            logger.debug(
+                "follower.disconnect() failed during subprocess teardown", exc_info=True
+            )
 
 
 class SubprocessFollower:
@@ -60,13 +64,16 @@ class SubprocessFollower:
         # Cache features (don't need subprocess for these)
         from .config_piper_follower import PiperFollowerConfig
         from .piper_follower import PiperFollower
-        temp = PiperFollower(PiperFollowerConfig(
-            can_port=config.can_port,
-            speed_rate=config.speed_rate,
-            max_relative_target=config.max_relative_target,
-            gripper_effort=config.gripper_effort,
-            cameras=config.cameras,
-        ))
+
+        temp = PiperFollower(
+            PiperFollowerConfig(
+                can_port=config.can_port,
+                speed_rate=config.speed_rate,
+                max_relative_target=config.max_relative_target,
+                gripper_effort=config.gripper_effort,
+                cameras=config.cameras,
+            )
+        )
         self._observation_features = temp.observation_features
         self._action_features = temp.action_features
         self.cameras = temp.cameras

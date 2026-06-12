@@ -44,15 +44,17 @@ class PiperFollowerBaseConfig:
     go_home_on_connect: bool = False
 
     # Home position in degrees (always degrees, converted internally if unit=rad)
-    home_position_deg: dict[str, float] = field(default_factory=lambda: {
-        "joint_1.pos": 0.0,
-        "joint_2.pos": 0.0,
-        "joint_3.pos": 0.0,
-        "joint_4.pos": 0.0,
-        "joint_5.pos": 0.0,
-        "joint_6.pos": 0.0,
-        "gripper.pos": 0.0,
-    })
+    home_position_deg: dict[str, float] = field(
+        default_factory=lambda: {
+            "joint_1.pos": 0.0,
+            "joint_2.pos": 0.0,
+            "joint_3.pos": 0.0,
+            "joint_4.pos": 0.0,
+            "joint_5.pos": 0.0,
+            "joint_6.pos": 0.0,
+            "gripper.pos": 0.0,
+        }
+    )
 
     # Log each policy inference chunk to console
     log_inference: bool = False
@@ -65,4 +67,5 @@ class PiperFollowerBaseConfig:
 @dataclass
 class PiperFollowerConfig(RobotConfig, PiperFollowerBaseConfig):
     """Configuration for AgileX Piper robot arm as a follower."""
+
     pass

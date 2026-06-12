@@ -8,7 +8,7 @@ from lerobot.utils.decorators import check_if_already_connected, check_if_not_co
 from .config_bi_piper_follower import BiPiperFollowerConfig
 from .config_piper_follower import PiperFollowerConfig
 from .piper_follower import PiperFollower
-from .subprocess_arm import SubprocessFollower
+from .subprocess_arm import SubprocessFollower  # nosec B404 - local module name, not the stdlib subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +88,16 @@ class BiPiperFollower(Robot):
 
     @check_if_not_connected
     def send_action(self, action: RobotAction) -> RobotAction:
-        left_action = {k.removeprefix("left_"): v for k, v in action.items() if k.startswith("left_")}
-        right_action = {k.removeprefix("right_"): v for k, v in action.items() if k.startswith("right_")}
+        left_action = {
+            k.removeprefix("left_"): v
+            for k, v in action.items()
+            if k.startswith("left_")
+        }
+        right_action = {
+            k.removeprefix("right_"): v
+            for k, v in action.items()
+            if k.startswith("right_")
+        }
 
         sent_left = self.left_arm.send_action(left_action)
         sent_right = self.right_arm.send_action(right_action)
