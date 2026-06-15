@@ -309,16 +309,6 @@ class PiperFollower(Robot):
         self._is_connected = False
         logger.info("PiperFollower disconnected.")
 
-    # Rest position: arm folded, safe for power-off (always in DEGREES)
-    REST_STATE_DEG = {
-        "joint_1.pos": -0.11,
-        "joint_2.pos": -2.26,
-        "joint_3.pos": 2.51,
-        "joint_4.pos": 1.83,
-        "joint_5.pos": 18.12,
-        "joint_6.pos": 0.00,
-        "gripper.pos": 0.60,
-    }
     _SAFE_SPEED = 30.0  # deg/s
     _CONTROL_RATE = 100.0  # Hz
     _MIN_DURATION = 0.3  # seconds
@@ -357,7 +347,7 @@ class PiperFollower(Robot):
         try:
             keys = [f"{n}.pos" for n in JOINT_NAMES] + ["gripper.pos"]
             current = self._get_current_deg()
-            target = self.REST_STATE_DEG
+            target = self.config.rest_position_deg
 
             max_delta = max(abs(target[k] - current[k]) for k in keys)
             duration = max(max_delta / self._SAFE_SPEED, self._MIN_DURATION)

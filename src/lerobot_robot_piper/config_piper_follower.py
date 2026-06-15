@@ -56,6 +56,20 @@ class PiperFollowerBaseConfig:
         }
     )
 
+    # Rest position in degrees (always degrees, converted internally if unit=rad).
+    # Used by disconnect() before disabling torque; tune this for your physical setup.
+    rest_position_deg: dict[str, float] = field(
+        default_factory=lambda: {
+            "joint_1.pos": -0.25,
+            "joint_2.pos": -2.282,
+            "joint_3.pos": 2.225,
+            "joint_4.pos": 1.864,
+            "joint_5.pos": 29.4,
+            "joint_6.pos": 0.861,
+            "gripper.pos": 0.80,
+        }
+    )
+
     # Log each policy inference chunk to console
     log_inference: bool = False
 

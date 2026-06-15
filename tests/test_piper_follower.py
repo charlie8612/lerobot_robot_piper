@@ -16,6 +16,15 @@ def test_config_defaults():
     assert cfg.unit == "deg"
     assert cfg.max_relative_target is None
     assert cfg.speed_rate == 50
+    assert cfg.rest_position_deg == {
+        "joint_1.pos": -0.25,
+        "joint_2.pos": -2.282,
+        "joint_3.pos": 2.225,
+        "joint_4.pos": 1.864,
+        "joint_5.pos": 29.4,
+        "joint_6.pos": 0.861,
+        "gripper.pos": 0.80,
+    }
 
 
 def test_features_schema():
